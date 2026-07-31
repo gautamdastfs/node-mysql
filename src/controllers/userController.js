@@ -8,8 +8,8 @@ export const createUser = async (req, res) => {
   }
 
   try {
-    const insertId = await UserModel.insertUser(name, email);
-    res.status(201).json({ id: insertId, name, email });
+    const newUser = await UserModel.insertUser(name, email);
+    res.status(201).json(newUser);
   } catch (error) {
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({ error: "Email already exists." });
@@ -50,23 +50,31 @@ export const updateUser = async (req, res) => {
   }
 
   try {
-    const affectedRows = await UserModel.updateUserById(id, name, email);
+    const updatedUser = await UserModel.updateUserById(id, name, email);
 
-    if (affectedRows === 0) {
+    if (!updatedUser) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    res.json({ message: "User updated successfully", id, name, email });
+    res.json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res
+        .status(409)
+        .json({ error: "Email already taken by another user." });
+    }
     res.status(500).json({ error: error.message });
   }
 };
 
 export const deleteUser = async (req, res) => {
   try {
-    const affectedRows = await UserModel.deleteUserById(req.params.id);
+    const isDeleted = await UserModel.deleteUserById(req.params.id);
 
-    if (affectedRows === 0) {
+    if (!isDeleted) {
       return res.status(404).json({ error: "User not found." });
     }
 
