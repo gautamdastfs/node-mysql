@@ -1,53 +1,69 @@
-import pool from "../config/db.js";
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db.js";
+
+export const User = sequelize.define(
+  "User",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true,
+      },
+    },
+  },
+  {
+    tableName: "users",
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  },
+);
 
 export const createUserTable = async () => {
-  const query = `
-    CREATE TABLE IF NOT EXISTS users (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      email VARCHAR(100) UNIQUE NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );
-  `;
-  await pool.query(query);
+  await User.sync();
 };
 
 export const insertUser = async (name, email) => {
-  const [result] = await pool.query(
-    "INSERT INTO users (name, email) VALUES (?, ?)",
-    [name, email],
-  );
-  return { id: result.insertId, name, email };
+  const user = await User.create({ name, email });
+  return user.toJSON();
 };
 
 export const findAllUsers = async () => {
-  const [rows] = await pool.query(
-    "SELECT id, name, email, created_at, updated_at FROM users ORDER BY id DESC",
-  );
-  return rows;
+  return await User.findAll({
+    attributes: ["id", "name", "email", "createdAt", "updatedAt"],
+    order: [["id", "DESC"]],
+  });
 };
 
 export const findUserById = async (id) => {
-  const [rows] = await pool.query(
-    "SELECT id, name, email, created_at, updated_at FROM users WHERE id = ?",
-    [id],
-  );
-  return rows[0] || null;
+  const user = await User.findByPk(id, {
+    attributes: ["id", "name", "email", "createdAt", "updatedAt"],
+  });
+  return user ? user.toJSON() : null;
 };
 
 export const updateUserById = async (id, name, email) => {
-  const [result] = await pool.query(
-    "UPDATE users SET name = ?, email = ? WHERE id = ?",
-    [name, email, id],
-  );
+  const user = await User.findByPk(id);
+  if (!user) return null;
 
-  if (result.affectedRows === 0) return null;
-
-  return await findUserById(id);
+  await user.update({ name, email });
+  return user.toJSON();
 };
 
 export const deleteUserById = async (id) => {
-  const [result] = await pool.query("DELETE FROM users WHERE id = ?", [id]);
-  return result.affectedRows > 0;
+  const deletedCount = await User.destroy({
+    where: { id },
+  });
+  return deletedCount > 0;
 };

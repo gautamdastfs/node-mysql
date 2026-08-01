@@ -1,3 +1,4 @@
+import { UniqueConstraintError } from "sequelize";
 import * as UserModel from "../models/userModel.js";
 
 export const createUser = async (req, res) => {
@@ -9,21 +10,24 @@ export const createUser = async (req, res) => {
 
   try {
     const newUser = await UserModel.insertUser(name, email);
-    res.status(201).json(newUser);
+    return res.status(201).json(newUser);
   } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") {
+    if (
+      error instanceof UniqueConstraintError ||
+      error.name === "SequelizeUniqueConstraintError"
+    ) {
       return res.status(409).json({ error: "Email already exists." });
     }
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
 export const getAllUsers = async (req, res) => {
   try {
     const users = await UserModel.findAllUsers();
-    res.json(users);
+    return res.json(users);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -35,9 +39,9 @@ export const getUserById = async (req, res) => {
       return res.status(404).json({ error: "User not found." });
     }
 
-    res.json(user);
+    return res.json(user);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -56,17 +60,20 @@ export const updateUser = async (req, res) => {
       return res.status(404).json({ error: "User not found." });
     }
 
-    res.json({
+    return res.json({
       message: "User updated successfully",
       user: updatedUser,
     });
   } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") {
+    if (
+      error instanceof UniqueConstraintError ||
+      error.name === "SequelizeUniqueConstraintError"
+    ) {
       return res
         .status(409)
         .json({ error: "Email already taken by another user." });
     }
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -78,8 +85,8 @@ export const deleteUser = async (req, res) => {
       return res.status(404).json({ error: "User not found." });
     }
 
-    res.json({ message: "User deleted successfully" });
+    return res.json({ message: "User deleted successfully" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
